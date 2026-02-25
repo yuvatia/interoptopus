@@ -1,0 +1,15 @@
+[package]
+name = "hello_world_c"
+version = "0.1.0"
+edition.workspace = true
+rust-version.workspace = true
+publish = false
+
+[lib]
+crate-type = ["cdylib", "rlib"]
+
+[dependencies]
+interoptopus = { path = "../../crates/core" }
+
+[dev-dependencies]
+interoptopus_backend_c = { path = "../../crates/backend_c" }

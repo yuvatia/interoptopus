@@ -28,6 +28,10 @@ pub fn enum_to_typename(g: &Interop, x: &Enum) -> String {
     format!("{}{}", g.prefix, x.rust_name()).to_naming_style(&g.enum_variant_naming)
 }
 
+pub fn enum_to_tag_typename(g: &Interop, x: &Enum) -> String {
+    format!("{}_TAG", enum_to_typename(g, x))
+}
+
 pub fn enum_variant_to_name(g: &Interop, the_enum: &Enum, x: &Variant) -> String {
     if g.enum_variant_style == EnumVariants::WithEnumName {
         format!("{}{}_{}", g.prefix, the_enum.rust_name().to_naming_style(&g.enum_variant_naming), x.name()).to_naming_style(&g.enum_variant_naming)

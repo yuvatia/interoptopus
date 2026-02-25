@@ -13,7 +13,7 @@ pub use types::write_type_definition;
 use crate::interop::constants::write_constants;
 use crate::interop::defines::{write_custom_defines, write_ifdefcpp, write_ifndef};
 use crate::interop::docs::write_file_header_comments;
-use crate::interop::functions::write_functions;
+use crate::interop::functions::{write_dispatch_table, write_functions, write_loader};
 use crate::interop::imports::write_imports;
 use crate::interop::types::write_type_definitions;
 use derive_builder::Builder;
@@ -154,6 +154,10 @@ pub struct Interop {
     #[builder(setter(into))]
     function_style: Functions,
     pub(crate) inventory: Inventory,
+    /// When set, generates a dispatch table struct and a cross-platform loader function
+    /// that loads symbols from a shared library at the given path via `dlopen`/`LoadLibrary`.
+    #[builder(setter(into, strip_option))]
+    loader: Option<String>,
 }
 
 impl Interop {
@@ -192,6 +196,13 @@ impl Interop {
                 w.newline()?;
 
                 write_functions(self, w)?;
+
+                if self.loader.is_some() {
+                    w.newline()?;
+                    write_dispatch_table(self, w)?;
+                    w.newline()?;
+                    write_loader(self, w)?;
+                }
 
                 Ok(())
             })?;

@@ -1,5 +1,6 @@
 use crate::converters::{
-    composite_to_typename, enum_to_typename, enum_variant_to_name, fnpointer_to_typename, named_callback_to_typename, opaque_to_typename, to_type_specifier,
+    composite_to_typename, enum_to_tag_typename, enum_to_typename, enum_variant_to_name, fnpointer_to_typename, named_callback_to_typename, opaque_to_typename,
+    to_type_specifier,
 };
 use crate::interop::ToNamingStyle;
 use crate::interop::docs::write_documentation;
@@ -121,12 +122,33 @@ fn write_type_definition_named_callback_body(i: &Interop, w: &mut IndentWriter, 
         params.push(format!("{} {}", to_type_specifier(i, param.the_type()), param.name().to_naming_style(&i.function_parameter_naming)));
     }
 
-    indented!(w, "{}", format!("typedef {} (*{})({});", rval, name, params.join(", ")))?;
+    // Function pointer typedef for the callback signature
+    let fn_typedef_name = format!("{name}_fn");
+    indented!(w, "typedef {} (*{})({});", rval, fn_typedef_name, params.join(", "))?;
+    w.newline()?;
+
+    // Struct matching Rust's repr(C) callback layout: (Option<fn>, *const c_void)
+    write_braced_declaration_opening(i, w, &format!("typedef struct {name}"))?;
+    indented!(w, "{} call;", fn_typedef_name)?;
+    indented!(w, "const void* context;")?;
+    write_braced_declaration_closing(i, w, &name)?;
 
     Ok(())
 }
 
+fn enum_has_typed_variants(e: &Enum) -> bool {
+    e.variants().iter().any(|v| v.kind().is_typed())
+}
+
 fn write_type_definition_enum(i: &Interop, w: &mut IndentWriter, the_type: &Enum) -> Result<(), Error> {
+    if enum_has_typed_variants(the_type) {
+        write_type_definition_enum_tagged_union(i, w, the_type)
+    } else {
+        write_type_definition_enum_simple(i, w, the_type)
+    }
+}
+
+fn write_type_definition_enum_simple(i: &Interop, w: &mut IndentWriter, the_type: &Enum) -> Result<(), Error> {
     let name = enum_to_typename(i, the_type);
 
     if i.documentation == DocStyle::Inline {
@@ -142,18 +164,60 @@ fn write_type_definition_enum(i: &Interop, w: &mut IndentWriter, the_type: &Enum
     write_braced_declaration_closing(i, w, name.as_str())
 }
 
+fn write_type_definition_enum_tagged_union(i: &Interop, w: &mut IndentWriter, the_type: &Enum) -> Result<(), Error> {
+    let name = enum_to_typename(i, the_type);
+    let tag_name = enum_to_tag_typename(i, the_type);
+
+    if i.documentation == DocStyle::Inline {
+        write_documentation(w, the_type.meta().docs())?;
+    }
+
+    // Emit the tag enum: typedef enum NAME_TAG { ... } NAME_TAG;
+    write_braced_declaration_opening(i, w, &format!("typedef enum {tag_name}"))?;
+
+    for variant in the_type.variants() {
+        write_type_definition_enum_variant(i, w, variant, the_type)?;
+    }
+
+    write_braced_declaration_closing(i, w, tag_name.as_str())?;
+    w.newline()?;
+
+    // Emit the struct with anonymous union: typedef struct NAME { NAME_TAG tag; union { ... }; } NAME;
+    write_braced_declaration_opening(i, w, &format!("typedef struct {name}"))?;
+    indented!(w, "{} tag;", tag_name)?;
+
+    // Only emit the union if there are typed variants
+    write_braced_declaration_opening(i, w, "union")?;
+    for variant in the_type.variants() {
+        if let VariantKind::Typed(_, inner_type) = variant.kind() {
+            let field_name = variant.name().to_lowercase();
+            if let Type::Array(a) = inner_type.as_ref() {
+                let type_name = to_type_specifier(i, a.the_type());
+                indented!(w, "{} {}[{}];", type_name, field_name, a.len())?;
+            } else {
+                let type_name = to_type_specifier(i, inner_type);
+                indented!(w, "{} {};", type_name, field_name)?;
+            }
+        }
+    }
+    write_braced_declaration_closing_anonymous(i, w)?;
+
+    write_braced_declaration_closing(i, w, name.as_str())
+}
+
 fn write_type_definition_enum_variant(i: &Interop, w: &mut IndentWriter, variant: &Variant, the_enum: &Enum) -> Result<(), Error> {
     let variant_name = enum_variant_to_name(i, the_enum, variant);
-    let variant_kind = variant.kind();
 
     if i.documentation == DocStyle::Inline {
         write_documentation(w, variant.docs())?;
     }
 
-    match variant_kind {
-        VariantKind::Unit(variant_value) => indented!(w, r"{} = {},", variant_name, variant_value)?,
-        VariantKind::Typed(_, _) => indented!(w, r"// TODO - OMITTED DATA VARIANT - BINDINGS ARE BROKEN")?,
-    }
+    let discriminant = match variant.kind() {
+        VariantKind::Unit(val) => val,
+        VariantKind::Typed(val, _) => val,
+    };
+
+    indented!(w, r"{} = {},", variant_name, discriminant)?;
     Ok(())
 }
 
@@ -253,6 +317,25 @@ fn write_braced_declaration_opening(i: &Interop, w: &mut IndentWriter, definitio
             indented!(w, "{}", definition)?;
             indented!(w, [()], "{{")?;
             w.indent();
+        }
+    }
+
+    Ok(())
+}
+
+fn write_braced_declaration_closing_anonymous(i: &Interop, w: &mut IndentWriter) -> Result<(), Error> {
+    match i.indentation {
+        Indentation::Allman | Indentation::KAndR => {
+            w.unindent();
+            indented!(w, "}};")?;
+        }
+        Indentation::GNU => {
+            w.unindent();
+            indented!(w, "  }};")?;
+        }
+        Indentation::Whitesmiths => {
+            w.unindent();
+            indented!(w, [()], "}};")?;
         }
     }
 

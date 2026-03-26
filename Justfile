@@ -5,7 +5,7 @@ alias doc := docs
 
 # Runs all tests CI would perform before merging a PR.
 [arg("verbose", long="verbose", short="v", value="--verbose")]
-ci verbose="": (build verbose) (test verbose) test-dotnet lint
+ci verbose="": (build verbose) (test verbose) test-dotnet test-c lint
 
 # Builds the workspace with all features.
 [arg("verbose", long="verbose", short="v", value="--verbose")]
@@ -36,6 +36,12 @@ test-dotnet:
     cargo build -p hello_world
     cargo test -p hello_world -- generate_bindings
     dotnet test examples/hello_world/bindings/hello_world.csproj
+
+# Runs C/C++ tests (gtest).
+test-c:
+    cargo build -p hello_world_c
+    cargo test -p hello_world_c -- generate_bindings
+    examples/hello_world_c/verify.sh
 
 # Runs .NET benchmarks.
 bench-dotnet:

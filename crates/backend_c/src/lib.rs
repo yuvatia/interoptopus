@@ -92,7 +92,7 @@ impl Ctx<'_> {
     fn type_name(&self, tid: &TypeId) -> String {
         let ty = self.resolve(tid);
         match &ty.kind {
-            TypeKind::Primitive(p) => primitive_c_name(p).to_string(),
+            TypeKind::Primitive(p) => primitive_c_name(*p).to_string(),
             TypeKind::ReadPointer(inner) => format!("const {}*", self.type_name(inner)),
             TypeKind::ReadWritePointer(inner) => format!("{}*", self.type_name(inner)),
             TypeKind::TypePattern(TypePattern::CChar) => "char".to_string(),
@@ -218,15 +218,12 @@ impl Ctx<'_> {
         writeln!(out, "{{")?;
         for f in &s.fields {
             let fty = self.resolve(&f.ty);
-            match &fty.kind {
-                TypeKind::Array(arr) => {
-                    let elem = self.type_specifier(&arr.ty);
-                    writeln!(out, "    {} {}[{}];", elem, f.name, arr.len)?;
-                }
-                _ => {
-                    let ty_name = self.type_specifier(&f.ty);
-                    writeln!(out, "    {} {};", ty_name, f.name)?;
-                }
+            if let TypeKind::Array(arr) = &fty.kind {
+                let elem = self.type_specifier(&arr.ty);
+                writeln!(out, "    {} {}[{}];", elem, f.name, arr.len)?;
+            } else {
+                let ty_name = self.type_specifier(&f.ty);
+                writeln!(out, "    {} {};", ty_name, f.name)?;
             }
         }
         writeln!(out, "}} {name};")?;
@@ -236,16 +233,7 @@ impl Ctx<'_> {
     fn write_enum(&self, out: &mut String, name: &str, e: &Enum) -> Result<(), std::fmt::Error> {
         let has_data = e.variants.iter().any(|v| matches!(v.kind, VariantKind::Tuple(_)));
 
-        if !has_data {
-            // Simple enum
-            writeln!(out, "typedef enum {name}")?;
-            writeln!(out, "{{")?;
-            for (i, v) in e.variants.iter().enumerate() {
-                let vname = format!("{name}_{}", v.name.to_uppercase());
-                writeln!(out, "    {vname} = {i},")?;
-            }
-            writeln!(out, "}} {name};")?;
-        } else {
+        if has_data {
             // Tagged union
             let tag_name = format!("{name}_TAG");
             writeln!(out, "typedef enum {tag_name}")?;
@@ -269,8 +257,16 @@ impl Ctx<'_> {
                 }
             }
             writeln!(out, "    }};")?;
-            writeln!(out, "}} {name};")?;
+        } else {
+            // Simple enum
+            writeln!(out, "typedef enum {name}")?;
+            writeln!(out, "{{")?;
+            for (i, v) in e.variants.iter().enumerate() {
+                let vname = format!("{name}_{}", v.name.to_uppercase());
+                writeln!(out, "    {vname} = {i},")?;
+            }
         }
+        writeln!(out, "}} {name};")?;
         Ok(())
     }
 
@@ -415,7 +411,7 @@ fn sanitize_c_name(name: &str) -> String {
         .collect()
 }
 
-fn primitive_c_name(p: &Primitive) -> &'static str {
+fn primitive_c_name(p: Primitive) -> &'static str {
     match p {
         Primitive::Void => "void",
         Primitive::Bool => "bool",
@@ -458,13 +454,13 @@ fn topo_visit(tid: &TypeId, inv: &RustInventory, known: &HashSet<&TypeId>, visit
     if !known.contains(tid) || visited.contains(tid) {
         return;
     }
-    visited.insert(tid.clone());
+    visited.insert(*tid);
 
     let ty = &inv.types[tid];
     for dep in type_deps(ty) {
         topo_visit(&dep, inv, known, visited, order);
     }
-    order.push(tid.clone());
+    order.push(*tid);
 }
 
 fn type_deps(ty: &Type) -> Vec<TypeId> {
@@ -472,37 +468,37 @@ fn type_deps(ty: &Type) -> Vec<TypeId> {
     match &ty.kind {
         TypeKind::Struct(s) => {
             for f in &s.fields {
-                deps.push(f.ty.clone());
+                deps.push(f.ty);
             }
         }
         TypeKind::Enum(e) => {
             for v in &e.variants {
                 if let VariantKind::Tuple(tid) = &v.kind {
-                    deps.push(tid.clone());
+                    deps.push(*tid);
                 }
             }
         }
         TypeKind::TypePattern(TypePattern::Slice(t) | TypePattern::SliceMut(t) | TypePattern::Vec(t) | TypePattern::Option(t)) => {
-            deps.push(t.clone());
+            deps.push(*t);
         }
         TypeKind::TypePattern(TypePattern::Result(ok, err)) => {
-            deps.push(ok.clone());
-            deps.push(err.clone());
+            deps.push(*ok);
+            deps.push(*err);
         }
         TypeKind::TypePattern(TypePattern::NamedCallback(sig)) => {
             for a in &sig.arguments {
-                deps.push(a.ty.clone());
+                deps.push(a.ty);
             }
-            deps.push(sig.rval.clone());
+            deps.push(sig.rval);
         }
         TypeKind::ReadPointer(t) | TypeKind::ReadWritePointer(t) => {
-            deps.push(t.clone());
+            deps.push(*t);
         }
         TypeKind::FnPointer(sig) => {
             for a in &sig.arguments {
-                deps.push(a.ty.clone());
+                deps.push(a.ty);
             }
-            deps.push(sig.rval.clone());
+            deps.push(sig.rval);
         }
         _ => {}
     }

@@ -4,6 +4,11 @@ project(hello_world_c_tests LANGUAGES CXX)
 set(CMAKE_CXX_STANDARD 20)
 set(CMAKE_CXX_STANDARD_REQUIRED ON)
 
+# Path to Rust cdylib output (passed via -DRUST_LIB_DIR=...)
+if(NOT DEFINED RUST_LIB_DIR)
+    message(FATAL_ERROR "RUST_LIB_DIR must be set to the directory containing the Rust cdylib")
+endif()
+
 include(FetchContent)
 FetchContent_Declare(
   googletest
@@ -16,7 +21,7 @@ enable_testing()
 
 add_executable(hello_world_c_tests main_test.cpp)
 
-target_include_directories(hello_world_c_tests PRIVATE ${CMAKE_CURRENT_SOURCE_DIR}/../bindings)
+target_include_directories(hello_world_c_tests PRIVATE ${CMAKE_CURRENT_SOURCE_DIR})
 target_link_libraries(hello_world_c_tests PRIVATE GTest::gtest_main)
 
 if(UNIX AND NOT APPLE)
@@ -24,4 +29,7 @@ if(UNIX AND NOT APPLE)
 endif()
 
 include(GoogleTest)
-gtest_discover_tests(hello_world_c_tests)
+gtest_discover_tests(hello_world_c_tests
+    PROPERTIES ENVIRONMENT "LD_LIBRARY_PATH=${RUST_LIB_DIR}"
+    DISCOVERY_MODE PRE_TEST
+)

@@ -34,14 +34,18 @@ test-dotnet:
     dotnet test crates/backend_csharp/tests/reference_project/reference_project_tests.csproj
     # hello_world example
     cargo build -p hello_world
-    cargo test -p hello_world -- generate_bindings
+    cargo test -p hello_world -- generate_csharp_bindings
     dotnet test examples/hello_world/bindings/hello_world.csproj
 
 # Runs C/C++ tests (gtest).
-test-c:
-    cargo build -p hello_world_c
-    cargo test -p hello_world_c -- generate_bindings
-    examples/hello_world_c/verify.sh
+test-c: (_test_c "hello_world" "examples/hello_world/bindings_c") (_test_c "hello_world_c" "crates/backend_c/tests/reference_project")
+
+# Helper: cmake configure + build + ctest with LD_LIBRARY_PATH pointing at Rust cdylibs.
+_test_c rust_crate dir:
+    cargo build -p {{ rust_crate }}
+    cmake -S {{ dir }} -B {{ dir }}/build -DCMAKE_BUILD_TYPE=Debug -DRUST_LIB_DIR={{`pwd`}}/target/debug
+    cmake --build {{ dir }}/build
+    ctest --test-dir {{ dir }}/build --output-on-failure
 
 # Runs .NET benchmarks.
 bench-dotnet:

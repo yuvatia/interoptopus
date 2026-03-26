@@ -1,4 +1,5 @@
-use interoptopus::{callback, ffi};
+use interoptopus::inventory::RustInventory;
+use interoptopus::{callback, extra_type, ffi, function};
 
 // ── Types ──
 
@@ -147,32 +148,21 @@ pub fn invoke_callback_kitchen_sink(callback: KitchenSinkCallback) {
     callback.call(&sink);
 }
 
-#[cfg(test)]
-mod tests {
-    use interoptopus::inventory::RustInventory;
-    use interoptopus::{extra_type, function};
-
-    // We just trick a unit test into producing our bindings, here for C
-    #[test]
-    #[rustfmt::skip]
-    fn generate_bindings() -> Result<(), Box<dyn std::error::Error>> {
-        let inventory = RustInventory::new()
-            .register(function!(super::shape_area))
-            .register(function!(super::total_area))
-            .register(function!(super::scale_commands))
-            .register(function!(super::create_default_commands))
-            .register(function!(super::destroy_draw_commands))
-            .register(function!(super::find_largest_position))
-            .register(function!(super::invoke_callback_shape))
-            .register(function!(super::invoke_callback_slice))
-            .register(function!(super::invoke_callback_option))
-            .register(function!(super::invoke_callback_vec))
-            .register(function!(super::invoke_callback_kitchen_sink))
-            .register(extra_type!(super::DrawCommand))
-            .validate();
-
-        interoptopus_c::generate("hello_world_c", &inventory, "bindings/hello_world.h")?;
-
-        Ok(())
-    }
+/// Returns the full FFI inventory for this library.
+#[rustfmt::skip]
+pub fn inventory() -> RustInventory {
+    RustInventory::new()
+        .register(function!(shape_area))
+        .register(function!(total_area))
+        .register(function!(scale_commands))
+        .register(function!(create_default_commands))
+        .register(function!(destroy_draw_commands))
+        .register(function!(find_largest_position))
+        .register(function!(invoke_callback_shape))
+        .register(function!(invoke_callback_slice))
+        .register(function!(invoke_callback_option))
+        .register(function!(invoke_callback_vec))
+        .register(function!(invoke_callback_kitchen_sink))
+        .register(extra_type!(DrawCommand))
+        .validate()
 }

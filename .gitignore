@@ -3,10 +3,11 @@ target
 *.rs.bk
 cmake-build-debug
 
-# C
+# C / C++ / CMake
 *.lib
 *.a
 *.o
+**/build/
 
 # C#
 obj

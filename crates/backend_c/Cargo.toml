@@ -11,5 +11,8 @@ version.workspace = true
 [dependencies]
 interoptopus.workspace = true
 
+[dev-dependencies]
+hello_world_c = { path = "../../examples/hello_world_c" }
+
 [lints]
 workspace = true

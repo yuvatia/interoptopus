@@ -17,24 +17,29 @@ pub fn my_function(input: Vec2) -> Vec2 {
 mod tests {
     use interoptopus::function;
     use interoptopus::inventory::RustInventory;
-    use interoptopus_csharp::RustLibrary;
+
+    fn inventory() -> RustInventory {
+        RustInventory::new().register(function!(super::my_function)).validate()
+    }
 
     // We just trick a unit test into producing our bindings, here for C#
     #[test]
-    #[rustfmt::skip]
-    fn generate_bindings() -> Result<(), Box<dyn std::error::Error>> {
-        // In a real project this should be a freestanding `my_inventory()` function inside
-        // your FFI or build crate.
-        let inventory = RustInventory::new()
-            .register(function!(super::my_function))
-            .validate();
+    fn generate_csharp_bindings() -> Result<(), Box<dyn std::error::Error>> {
+        use interoptopus_csharp::RustLibrary;
 
-        RustLibrary::builder(inventory)
+        RustLibrary::builder(inventory())
             .dll_name("hello_world")
             .build()
             .process()?
             .write_buffers_to("bindings/")?;
 
+        Ok(())
+    }
+
+    // ... and for C
+    #[test]
+    fn generate_c_bindings() -> Result<(), Box<dyn std::error::Error>> {
+        interoptopus_c::generate("hello_world", &inventory(), "bindings_c/hello_world.h")?;
         Ok(())
     }
 }

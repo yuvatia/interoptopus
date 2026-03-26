@@ -91,31 +91,6 @@ typedef struct KITCHENSINK
     OPTIONSTRING name;
 } KITCHENSINK;
 
-typedef struct VECDRAWCOMMAND
-{
-    DRAWCOMMAND* ptr;
-    uint64_t len;
-    uint64_t capacity;
-} VECDRAWCOMMAND;
-
-typedef float (*SHAPECALLBACK_fn)(SHAPE, const void*);
-
-typedef struct SHAPECALLBACK
-{
-    SHAPECALLBACK_fn callback;
-    const void* data;
-    void (*destructor)(const void*);
-} SHAPECALLBACK;
-
-typedef float (*VECCALLBACK_fn)(VECDRAWCOMMAND, const void*);
-
-typedef struct VECCALLBACK
-{
-    VECCALLBACK_fn callback;
-    const void* data;
-    void (*destructor)(const void*);
-} VECCALLBACK;
-
 typedef void (*KITCHENSINKCALLBACK_fn)(const KITCHENSINK*, const void*);
 
 typedef struct KITCHENSINKCALLBACK
@@ -124,6 +99,13 @@ typedef struct KITCHENSINKCALLBACK
     const void* data;
     void (*destructor)(const void*);
 } KITCHENSINKCALLBACK;
+
+typedef struct VECDRAWCOMMAND
+{
+    DRAWCOMMAND* ptr;
+    uint64_t len;
+    uint64_t capacity;
+} VECDRAWCOMMAND;
 
 typedef struct SLICEMUTDRAWCOMMAND
 {
@@ -140,6 +122,15 @@ typedef struct SLICECALLBACK
     void (*destructor)(const void*);
 } SLICECALLBACK;
 
+typedef float (*VECCALLBACK_fn)(VECDRAWCOMMAND, const void*);
+
+typedef struct VECCALLBACK
+{
+    VECCALLBACK_fn callback;
+    const void* data;
+    void (*destructor)(const void*);
+} VECCALLBACK;
+
 typedef float (*OPTIONCALLBACK_fn)(OPTIONVEC2, const void*);
 
 typedef struct OPTIONCALLBACK
@@ -148,6 +139,15 @@ typedef struct OPTIONCALLBACK
     const void* data;
     void (*destructor)(const void*);
 } OPTIONCALLBACK;
+
+typedef float (*SHAPECALLBACK_fn)(SHAPE, const void*);
+
+typedef struct SHAPECALLBACK
+{
+    SHAPECALLBACK_fn callback;
+    const void* data;
+    void (*destructor)(const void*);
+} SHAPECALLBACK;
 
 
 VECDRAWCOMMAND create_default_commands(void);

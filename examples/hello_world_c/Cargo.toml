@@ -10,6 +10,3 @@ crate-type = ["cdylib", "rlib"]
 
 [dependencies]
 interoptopus = { path = "../../crates/core" }
-
-[dev-dependencies]
-interoptopus_c = { path = "../../crates/backend_c" }

@@ -65,7 +65,7 @@ static void cb_kitchen_sink(const KITCHENSINK* sink, const void* ctx) {
 
     printf("    tags:     [%llu commands]\n", (unsigned long long)sink->tags.len);
 
-    if (sink->name.tag == OPTIONUTF8STRING_SOME) {
+    if (sink->name.tag == OPTIONSTRING_SOME) {
         printf("    name:     Some(\"%.*s\")\n",
                (int)sink->name.some.len, (const char*)sink->name.some.ptr);
     } else {
@@ -112,17 +112,17 @@ int main(void) {
 
     /* ── Callback with Shape ── */
 
-    SHAPECALLBACK shape_cb = { cb_shape_area, NULL };
+    SHAPECALLBACK shape_cb = { cb_shape_area, NULL, NULL };
     printf("Callback shape area: %f\n", api.invoke_callback_shape(circle, shape_cb));
 
     /* ── Callback with Slice ── */
 
-    SLICECALLBACK slice_cb = { cb_slice_total_area, NULL };
+    SLICECALLBACK slice_cb = { cb_slice_total_area, NULL, NULL };
     printf("Callback slice total: %f\n", api.invoke_callback_slice(slice, slice_cb));
 
     /* ── Callback with Option ── */
 
-    OPTIONCALLBACK opt_cb = { cb_option_magnitude, NULL };
+    OPTIONCALLBACK opt_cb = { cb_option_magnitude, NULL, NULL };
     OPTIONVEC2 some_vec;
     some_vec.tag = OPTIONVEC2_SOME;
     some_vec.some.x = 3.0f;
@@ -135,12 +135,12 @@ int main(void) {
 
     /* ── Callback with Vec (Rust creates + passes Vec, callback destroys) ── */
 
-    VECCALLBACK vec_cb = { cb_vec_count, NULL };
+    VECCALLBACK vec_cb = { cb_vec_count, NULL, NULL };
     printf("Callback vec count: %f\n", api.invoke_callback_vec(vec_cb));
 
     /* ── Callback with KitchenSink (struct with all FFI types) ── */
 
-    KITCHENSINKCALLBACK sink_cb = { cb_kitchen_sink, NULL };
+    KITCHENSINKCALLBACK sink_cb = { cb_kitchen_sink, NULL, NULL };
     printf("Kitchen sink callback:\n");
     api.invoke_callback_kitchen_sink(sink_cb);
 

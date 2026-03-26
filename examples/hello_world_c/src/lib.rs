@@ -1,22 +1,22 @@
-use interoptopus::{callback, ffi, ffi_function, ffi_type};
+use interoptopus::{callback, ffi};
 
 // ── Types ──
 
-#[ffi_type]
+#[ffi]
 #[derive(Clone, Copy)]
 pub struct Vec2 {
     pub x: f32,
     pub y: f32,
 }
 
-#[ffi_type]
+#[ffi]
 #[derive(Clone, Copy)]
 pub enum Shape {
     Circle(f32),
     Rectangle(Vec2),
 }
 
-#[ffi_type]
+#[ffi]
 #[derive(Clone, Copy)]
 pub struct DrawCommand {
     pub shape: Shape,
@@ -24,7 +24,7 @@ pub struct DrawCommand {
 }
 
 /// A struct exercising all major FFI types at once.
-#[ffi_type]
+#[ffi]
 pub struct KitchenSink {
     pub id: u64,
     pub enabled: bool,
@@ -46,7 +46,7 @@ callback!(KitchenSinkCallback(sink: &KitchenSink));
 
 // ── Functions ──
 
-#[ffi_function]
+#[ffi]
 pub fn shape_area(shape: Shape) -> f32 {
     match shape {
         Shape::Circle(r) => std::f32::consts::PI * r * r,
@@ -54,12 +54,12 @@ pub fn shape_area(shape: Shape) -> f32 {
     }
 }
 
-#[ffi_function]
+#[ffi]
 pub fn total_area(commands: ffi::Slice<DrawCommand>) -> f32 {
     commands.as_slice().iter().map(|c| shape_area(c.shape)).sum()
 }
 
-#[ffi_function]
+#[ffi]
 pub fn scale_commands(mut commands: ffi::SliceMut<DrawCommand>, factor: f32) {
     for cmd in commands.as_slice_mut() {
         match &mut cmd.shape {
@@ -72,7 +72,7 @@ pub fn scale_commands(mut commands: ffi::SliceMut<DrawCommand>, factor: f32) {
     }
 }
 
-#[ffi_function]
+#[ffi]
 pub fn create_default_commands() -> ffi::Vec<DrawCommand> {
     let commands = vec![
         DrawCommand { shape: Shape::Circle(5.0), position: Vec2 { x: 0.0, y: 0.0 } },
@@ -81,12 +81,12 @@ pub fn create_default_commands() -> ffi::Vec<DrawCommand> {
     ffi::Vec::from(commands)
 }
 
-#[ffi_function]
+#[ffi]
 pub fn destroy_draw_commands(_commands: ffi::Vec<DrawCommand>) {
     // Vec is dropped here, freeing the backing allocation.
 }
 
-#[ffi_function]
+#[ffi]
 pub fn find_largest_position(commands: ffi::Slice<DrawCommand>) -> ffi::Option<Vec2> {
     let mut max_area = 0.0f32;
     let mut max_pos = None;
@@ -103,22 +103,22 @@ pub fn find_largest_position(commands: ffi::Slice<DrawCommand>) -> ffi::Option<V
     }
 }
 
-#[ffi_function]
+#[ffi]
 pub fn invoke_callback_shape(shape: Shape, callback: ShapeCallback) -> f32 {
     callback.call(shape)
 }
 
-#[ffi_function]
+#[ffi]
 pub fn invoke_callback_slice(commands: ffi::Slice<DrawCommand>, callback: SliceCallback) -> f32 {
     callback.call(commands)
 }
 
-#[ffi_function]
+#[ffi]
 pub fn invoke_callback_option(opt: ffi::Option<Vec2>, callback: OptionCallback) -> f32 {
     callback.call(opt)
 }
 
-#[ffi_function]
+#[ffi]
 pub fn invoke_callback_vec(callback: VecCallback) -> f32 {
     let commands = vec![
         DrawCommand { shape: Shape::Circle(3.0), position: Vec2 { x: 1.0, y: 1.0 } },
@@ -132,7 +132,7 @@ static SINK_COMMANDS: [DrawCommand; 2] = [
     DrawCommand { shape: Shape::Rectangle(Vec2 { x: 3.0, y: 4.0 }), position: Vec2 { x: 10.0, y: 10.0 } },
 ];
 
-#[ffi_function]
+#[ffi]
 pub fn invoke_callback_kitchen_sink(callback: KitchenSinkCallback) {
     let sink = KitchenSink {
         id: 42,
@@ -151,10 +151,9 @@ pub fn invoke_callback_kitchen_sink(callback: KitchenSinkCallback) {
 #[rustfmt::skip]
 fn generate_bindings() {
     use interoptopus::{extra_type, function};
-    use interoptopus::inventory::Inventory;
-    use interoptopus_backend_c::Interop;
+    use interoptopus::inventory::RustInventory;
 
-    let inventory = Inventory::builder()
+    let inventory = RustInventory::new()
         .register(function!(shape_area))
         .register(function!(total_area))
         .register(function!(scale_commands))
@@ -167,12 +166,8 @@ fn generate_bindings() {
         .register(function!(invoke_callback_vec))
         .register(function!(invoke_callback_kitchen_sink))
         .register(extra_type!(DrawCommand))
-        .validate()
-        .build();
+        .validate();
 
-    Interop::builder()
-        .inventory(inventory)
-        .loader("hello_world_c".to_string())
-        .build().unwrap()
-        .write_file("bindings/hello_world.h").unwrap()
+    interoptopus_c::generate("hello_world_c", &inventory, "bindings/hello_world.h")
+        .expect("Failed to generate C bindings");
 }

@@ -15,6 +15,21 @@ typedef struct STRING
     uint64_t capacity;
 } STRING;
 
+typedef enum OPTIONSTRING_TAG
+{
+    OPTIONSTRING_SOME = 0,
+    OPTIONSTRING_NONE = 1,
+} OPTIONSTRING_TAG;
+
+typedef struct OPTIONSTRING
+{
+    OPTIONSTRING_TAG tag;
+    union
+    {
+        STRING some;
+    };
+} OPTIONSTRING;
+
 typedef struct VEC2
 {
     float x;
@@ -64,21 +79,6 @@ typedef struct SLICEDRAWCOMMAND
     uint64_t len;
 } SLICEDRAWCOMMAND;
 
-typedef enum OPTIONSTRING_TAG
-{
-    OPTIONSTRING_SOME = 0,
-    OPTIONSTRING_NONE = 1,
-} OPTIONSTRING_TAG;
-
-typedef struct OPTIONSTRING
-{
-    OPTIONSTRING_TAG tag;
-    union
-    {
-        STRING some;
-    };
-} OPTIONSTRING;
-
 typedef struct KITCHENSINK
 {
     uint64_t id;
@@ -100,27 +100,21 @@ typedef struct KITCHENSINKCALLBACK
     void (*destructor)(const void*);
 } KITCHENSINKCALLBACK;
 
+typedef float (*OPTIONCALLBACK_fn)(OPTIONVEC2, const void*);
+
+typedef struct OPTIONCALLBACK
+{
+    OPTIONCALLBACK_fn callback;
+    const void* data;
+    void (*destructor)(const void*);
+} OPTIONCALLBACK;
+
 typedef struct VECDRAWCOMMAND
 {
     DRAWCOMMAND* ptr;
     uint64_t len;
     uint64_t capacity;
 } VECDRAWCOMMAND;
-
-typedef struct SLICEMUTDRAWCOMMAND
-{
-    DRAWCOMMAND* data;
-    uint64_t len;
-} SLICEMUTDRAWCOMMAND;
-
-typedef float (*SLICECALLBACK_fn)(SLICEDRAWCOMMAND, const void*);
-
-typedef struct SLICECALLBACK
-{
-    SLICECALLBACK_fn callback;
-    const void* data;
-    void (*destructor)(const void*);
-} SLICECALLBACK;
 
 typedef float (*VECCALLBACK_fn)(VECDRAWCOMMAND, const void*);
 
@@ -131,14 +125,20 @@ typedef struct VECCALLBACK
     void (*destructor)(const void*);
 } VECCALLBACK;
 
-typedef float (*OPTIONCALLBACK_fn)(OPTIONVEC2, const void*);
+typedef float (*SLICECALLBACK_fn)(SLICEDRAWCOMMAND, const void*);
 
-typedef struct OPTIONCALLBACK
+typedef struct SLICECALLBACK
 {
-    OPTIONCALLBACK_fn callback;
+    SLICECALLBACK_fn callback;
     const void* data;
     void (*destructor)(const void*);
-} OPTIONCALLBACK;
+} SLICECALLBACK;
+
+typedef struct SLICEMUTDRAWCOMMAND
+{
+    DRAWCOMMAND* data;
+    uint64_t len;
+} SLICEMUTDRAWCOMMAND;
 
 typedef float (*SHAPECALLBACK_fn)(SHAPE, const void*);
 

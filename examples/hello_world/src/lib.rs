@@ -22,7 +22,8 @@ mod tests {
         RustInventory::new().register(function!(super::my_function)).validate()
     }
 
-    // We just trick a unit test into producing our bindings, here for C#
+    // We just trick unit tests into producing our bindings.
+
     #[test]
     fn generate_csharp_bindings() -> Result<(), Box<dyn std::error::Error>> {
         use interoptopus_csharp::RustLibrary;
@@ -36,7 +37,6 @@ mod tests {
         Ok(())
     }
 
-    // ... and for C
     #[test]
     fn generate_c_bindings() -> Result<(), Box<dyn std::error::Error>> {
         interoptopus_c::generate("hello_world", &inventory(), "bindings_c/hello_world.h")?;

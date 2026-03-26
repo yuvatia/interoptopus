@@ -32,6 +32,10 @@ test-dotnet:
     cargo build -p reference_project
     cargo test --test mod reference_project::interop
     dotnet test crates/backend_csharp/tests/reference_project/reference_project_tests.csproj
+    # hello_world example
+    cargo build -p hello_world
+    cargo test -p hello_world -- generate_bindings
+    dotnet test examples/hello_world/bindings/hello_world.csproj
 
 # Runs .NET benchmarks.
 bench-dotnet:
